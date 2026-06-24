@@ -12,8 +12,8 @@ from recommendations import analyze_user_sessions
 from database import db, User, Session, AlertEvent, Achievement, ACHIEVEMENT_DEFINITIONS, init_db
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'antigravity-drowsiness-secret-key-9988'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///drowsiness.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'antigravity-drowsiness-secret-key-9988')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///drowsiness.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize DB
