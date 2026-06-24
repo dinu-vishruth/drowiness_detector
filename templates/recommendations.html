@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}AI Insights & Focus Recommendations - AuraFocus{% endblock %}
+
+{% block content %}
+<div class="ai-insights-container">
+    {% if not insights.has_data %}
+        <!-- Not enough data state -->
+        <div class="card empty-insights-card text-center">
+            <span class="ai-brain-icon">🧠</span>
+            <h2 class="gradient-text">Personalized AI Insights Locked</h2>
+            <p class="insight-disclaimer">{{ insights.message }}</p>
+            
+            <div class="baseline-steps">
+                <h3>How to unlock:</h3>
+                <div class="steps-row">
+                    <div class="step-col card">
+                        <span class="step-num">1</span>
+                        <h4>Record Sessions</h4>
+                        <p>Complete at least 2 sessions using the real-time webcam monitor.</p>
+                    </div>
+                    <div class="step-col card">
+                        <span class="step-num">2</span>
+                        <h4>Calibrate Camera</h4>
+                        <p>Ensure you calibrate the sensitivity to gather clean focus data points.</p>
+                    </div>
+                    <div class="step-col card">
+                        <span class="step-num">3</span>
+                        <h4>Vary Work Hours</h4>
+                        <p>Track your alertness at different times of day to identify your fatigue patterns.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="fallback-recommendations-section card">
+                <h3>General Fatigue Mitigation Tips</h3>
+                <ul class="fallback-tips-list">
+                    {% for tip in insights.recommendations %}
+                        <li>⚡ {{ tip }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% else %}
+        <!-- Active Insights page -->
+        <div class="insights-summary-banner card">
+            <div class="banner-bg-glow"></div>
+            <div class="banner-content">
+                <span class="banner-icon">🧠</span>
+                <div>
+                    <h2>AuraFocus AI Recommendations</h2>
+                    <p>{{ insights.message }} The recommendations below are derived from your historical focus score, blinking, yawning, and head nodding data.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="insights-dashboard-row">
+            <!-- Peak and Risk Hours cards -->
+            <div class="insight-hours-card card">
+                <div class="hour-segment peak">
+                    <span class="segment-icon">☀️</span>
+                    <div class="segment-info">
+                        <h3>Peak Focus Period</h3>
+                        <p class="hour-val">{{ insights.peak_hours }}</p>
+                        <p class="hour-desc">You demonstrate the highest average alertness and lowest drowsiness indicators during these hours.</p>
+                    </div>
+                </div>
+                
+                <div class="hour-segment risk">
+                    <span class="segment-icon">😴</span>
+                    <div class="segment-info">
+                        <h3>High Drowsiness Risk</h3>
+                        <p class="hour-val">{{ insights.drowsiness_hours }}</p>
+                        <p class="hour-desc">You are most vulnerable to fatigue during this time. Take active measures before starting.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Focus decay recommendation -->
+            <div class="insight-decay-card card text-center">
+                <h3>Estimated Fatigue Onset</h3>
+                <div class="decay-gauge">
+                    <span class="decay-mins">{{ insights.decay_minutes }}</span>
+                    <span class="decay-unit">Mins</span>
+                </div>
+                <p>Your average alertness shows a downward trajectory after approximately <strong>{{ insights.decay_minutes }} minutes</strong> of continuous work. We recommend scheduling a structured 5-minute break at this threshold.</p>
+            </div>
+        </div>
+        
+        <div class="ai-recommendations-card card">
+            <div class="card-header">
+                <h3>Data-Driven Recommendations</h3>
+                <p>Specific behavioral adjustments tailored to your statistics</p>
+            </div>
+            <div class="recommendations-list">
+                {% for rec in insights.recommendations %}
+                    <div class="recommendation-item">
+                        <div class="rec-bullet-icon">💡</div>
+                        <p class="rec-text">{{ rec }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

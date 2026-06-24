@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Drowsiness Prevention System{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+    <!-- Row 1: Profile Summary Card -->
+    <div class="glass-card profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar">⚡</div>
+            <div class="profile-info">
+                <h3>{{ current_user.username }}</h3>
+                <p class="user-level">Level {{ level }} Alertness Specialist</p>
+                <div class="level-progress-container">
+                    <div class="level-progress-bar" style="width: {{ level_progress }}%;"></div>
+                </div>
+                <span class="level-progress-text">{{ current_user.points % 500 }} / 500 XP to Level {{ level + 1 }}</span>
+            </div>
+        </div>
+        
+        <div class="profile-stats-grid">
+            <div class="p-stat">
+                <span class="p-stat-val">🔥 {{ current_user.streak_days }}</span>
+                <span class="p-stat-lbl">Active Streak</span>
+            </div>
+            <div class="p-stat">
+                <span class="p-stat-val">🪙 {{ current_user.points }}</span>
+                <span class="p-stat-lbl">Total XP</span>
+            </div>
+            <div class="p-stat">
+                <span class="p-stat-val">📊 {{ avg_focus | round(1) }}%</span>
+                <span class="p-stat-lbl">Avg Focus</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 1: Quick Stats Cards -->
+    <div class="stats-overview-grid">
+        <div class="glass-card stat-card glow-cyan">
+            <span class="stat-icon">⏱️</span>
+            <div class="stat-data">
+                <span class="stat-number">{{ total_duration_formatted }}</span>
+                <span class="stat-label">Monitored Time</span>
+            </div>
+        </div>
+        <div class="glass-card stat-card glow-green">
+            <span class="stat-icon">📈</span>
+            <div class="stat-data">
+                <span class="stat-number">{{ total_sessions }}</span>
+                <span class="stat-label">Total Sessions</span>
+            </div>
+        </div>
+        <div class="glass-card stat-card glow-pink">
+            <span class="stat-icon">⚠️</span>
+            <div class="stat-data">
+                <span class="stat-number">{{ total_alerts }}</span>
+                <span class="stat-label">Total Alerts Logged</span>
+            </div>
+        </div>
+        <div class="glass-card stat-card glow-purple">
+            <span class="stat-icon">🧠</span>
+            <div class="stat-data">
+                <span class="stat-number">{{ achievements_unlocked_count }} / 6</span>
+                <span class="stat-label">Achievements</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: AI Productivity Insights Card -->
+    <div class="glass-card full-width insights-card glow-purple">
+        <div class="card-header">
+            <h3>🧠 AI Focus & Alertness Insights</h3>
+            <span class="card-subtitle">{{ insights.message }}</span>
+        </div>
+        <div class="insights-body">
+            {% if insights.has_data %}
+                <div class="insights-metrics-row">
+                    <div class="insight-metric">
+                        <span class="im-label">🎯 PEAK FOCUS HOUR</span>
+                        <span class="im-value">{{ insights.peak_hours }}</span>
+                    </div>
+                    <div class="insight-metric">
+                        <span class="im-label">⚠️ FATIGUE RISK ZONE</span>
+                        <span class="im-value">{{ insights.drowsiness_hours }}</span>
+                    </div>
+                    <div class="insight-metric">
+                        <span class="im-label">⏳ FOCUS DECAY THRESHOLD</span>
+                        <span class="im-value">{{ insights.decay_minutes }} minutes</span>
+                    </div>
+                </div>
+                <div class="insights-bullets">
+                    <h4>Personalized Recommendations:</h4>
+                    <ul>
+                        {% for rec in insights.recommendations %}
+                            <li>💡 {{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% else %}
+                <div class="insights-empty">
+                    <div class="insights-empty-banner">🔒 Collect more session data to unlock personalized AI focus recommendations!</div>
+                    <ul class="insights-empty-tips">
+                        {% for rec in insights.recommendations %}
+                            <li>📌 {{ rec }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Row 3: Charts Area -->
+    <div class="glass-card chart-card full-width">
+        <div class="card-header">
+            <h3>📈 Focus & Alertness Trend</h3>
+            <span class="card-subtitle">Performance over your last 10 sessions</span>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="dashboardChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Row 3: Achievements -->
+    <div class="glass-card achievements-card">
+        <div class="card-header">
+            <h3>🏆 Achievements & Rewards</h3>
+            <span class="card-subtitle">Complete goals to unlock awards and extra points</span>
+        </div>
+        
+        <div class="achievements-list">
+            {% for key, ach in achievement_states.items() %}
+                <div class="achievement-item {% if ach.unlocked %}unlocked{% else %}locked{% endif %}">
+                    <span class="ach-badge">{{ ach.icon }}</span>
+                    <div class="ach-details">
+                        <h4>{{ ach.title }}</h4>
+                        <p>{{ ach.description }}</p>
+                        <div class="ach-meta">
+                            <span class="ach-reward">🪙 +{{ ach.points_reward }} XP</span>
+                            {% if ach.unlocked %}
+                                <span class="ach-date">Unlocked: {{ ach.unlocked_at.strftime('%Y-%m-%d') }}</span>
+                            {% else %}
+                                <span class="ach-status">Locked</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Row 3: Recent Sessions Table -->
+    <div class="glass-card sessions-list-card">
+        <div class="card-header">
+            <h3>🕒 Recent Sessions</h3>
+            <span class="card-subtitle">Track your focus and view breakdown logs</span>
+        </div>
+        
+        <div class="table-wrapper">
+            {% if sessions %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Duration</th>
+                            <th>Focus Score</th>
+                            <th>Alerts</th>
+                            <th>Avg Alertness</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for session in sessions %}
+                            <tr>
+                                <td>{{ session.start_time.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td class="mono">{{ session.formatted_duration }}</td>
+                                <td class="mono">
+                                    <span class="badge {% if session.focus_score >= 90 %}badge-green{% elif session.focus_score >= 70 %}badge-yellow{% else %}badge-red{% endif %}">
+                                        {{ session.focus_score | round(0) }}%
+                                    </span>
+                                </td>
+                                <td class="mono">{{ session.alerts_count }}</td>
+                                <td class="mono">{{ session.avg_alertness | round(0) }}%</td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="{{ url_for('session_detail', session_id=session.id) }}" class="btn-table primary" title="View details">🔍 Details</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <p>No sessions recorded yet. Start monitoring to gather stats!</p>
+                    <a href="{{ url_for('monitor') }}" class="btn primary">Start First Session</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('dashboardChart').getContext('2d');
+        
+        const sessionDates = [{% for s in chart_sessions %}"{{ s.start_time.strftime('%m-%d %H:%M') }}",{% endfor %}];
+        const focusScores = [{% for s in chart_sessions %}{{ s.focus_score | round(1) }},{% endfor %}];
+        const durations = [{% for s in chart_sessions %}{{ (s.duration_seconds / 60) | round(1) }},{% endfor %}];
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sessionDates,
+                datasets: [
+                    {
+                        label: 'Focus Score (%)',
+                        data: focusScores,
+                        borderColor: '#00f2ea',
+                        backgroundColor: 'rgba(0, 242, 234, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#00f2ea',
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Duration (mins)',
+                        data: durations,
+                        borderColor: '#ff0055',
+                        backgroundColor: 'rgba(255, 0, 85, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#ff0055',
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff',
+                            font: { family: 'Inter', size: 12 }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#aaaaaa', font: { family: 'Inter' } }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#00f2ea', font: { family: 'Inter' } },
+                        title: { display: true, text: 'Focus Score %', color: '#00f2ea' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        min: 0,
+                        grid: { drawOnChartArea: false },
+                        ticks: { color: '#ff0055', font: { family: 'Inter' } },
+                        title: { display: true, text: 'Duration (Minutes)', color: '#ff0055' }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

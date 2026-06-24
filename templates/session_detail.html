@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block title %}Session Details - Drowsiness Prevention System{% endblock %}
+
+{% block head %}
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="session-detail-container">
+    <div class="detail-header-row">
+        <div>
+            <h2>📊 Session Breakdown</h2>
+            <span class="detail-subtitle">Recorded on {{ session.start_time.strftime('%Y-%m-%d at %H:%M:%S') }}</span>
+        </div>
+        <div class="export-actions">
+            <a href="{{ url_for('export_csv', session_id=session.id) }}" class="btn secondary">📥 Export CSV</a>
+            <a href="{{ url_for('export_pdf', session_id=session.id) }}" class="btn primary">📄 Download PDF Report</a>
+        </div>
+    </div>
+
+    <!-- KPI Metrics Grid -->
+    <div class="metrics-grid">
+        <div class="glass-card metric-card">
+            <span class="m-icon">🎯</span>
+            <div class="m-data">
+                <span class="m-val mono">{{ session.focus_score | round(1) }}%</span>
+                <span class="m-lbl">Overall Focus Score</span>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <span class="m-icon">⏱️</span>
+            <div class="m-data">
+                <span class="m-val mono">{{ session.formatted_duration }}</span>
+                <span class="m-lbl">Session Duration</span>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <span class="m-icon">📈</span>
+            <div class="m-data">
+                <span class="m-val mono">{{ session.avg_alertness | round(1) }}%</span>
+                <span class="m-lbl">Average Alertness</span>
+            </div>
+        </div>
+        <div class="glass-card metric-card">
+            <span class="m-icon">⚠️</span>
+            <div class="m-data">
+                <span class="m-val mono">{{ session.alerts_count }}</span>
+                <span class="m-lbl">Total Alerts</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Session Alertness Graph -->
+    <div class="glass-card chart-card">
+        <h3>📈 Alertness Timeline</h3>
+        <span class="card-subtitle">Alertness level fluctuations and events during this session</span>
+        <div class="chart-wrapper" style="height: 300px;">
+            <canvas id="sessionDetailChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Alert Events Table -->
+    <div class="glass-card events-list-card">
+        <h3>⚠️ Incident Log ({{ alerts | length }} items)</h3>
+        <span class="card-subtitle">Chronological record of warning and critical drowsiness events</span>
+        
+        <div class="table-wrapper">
+            {% if alerts %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Time Offset</th>
+                            <th>Timestamp</th>
+                            <th>Severity</th>
+                            <th>Trigger Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in alerts %}
+                            {% set offset_seconds = (alert.timestamp - session.start_time).total_seconds() %}
+                            {% set mins = (offset_seconds // 60) | int %}
+                            {% set secs = (offset_seconds % 60) | int %}
+                            <tr>
+                                <td class="mono">+{{ "%02d:%02d" | format(mins, secs) }}</td>
+                                <td>{{ alert.timestamp.strftime('%H:%M:%S') }}</td>
+                                <td>
+                                    <span class="badge {% if alert.severity_level == 'Critical' %}badge-red{% else %}badge-yellow{% endif %}">
+                                        {{ alert.severity_level }}
+                                    </span>
+                                </td>
+                                <td>{{ alert.trigger_reason }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="empty-state">
+                    <p class="text-green">🎉 Excellent! No drowsiness incidents were logged during this session.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ctx = document.getElementById('sessionDetailChart').getContext('2d');
+        
+        // Build timeline labels and data points from the Python context
+        const labels = [{% for pt in timeline_points %}"{{ pt.time }}",{% endfor %}];
+        const alertness = [{% for pt in timeline_points %}{{ pt.value }},{% endfor %}];
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Alertness Level (%)',
+                    data: alertness,
+                    borderColor: function(context) {
+                        const chart = context.chart;
+                        const {ctx, chartArea} = chart;
+                        if (!chartArea) return null;
+                        
+                        const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                        gradient.addColorStop(0, '#ff0055');   // Red for drowsy
+                        gradient.addColorStop(0.5, '#ffd700'); // Yellow for warning
+                        gradient.addColorStop(1, '#00f2ea');   // Cyan for fully awake
+                        return gradient;
+                    },
+                    backgroundColor: 'rgba(0, 242, 234, 0.03)',
+                    borderWidth: 3,
+                    pointBackgroundColor: function(context) {
+                        const val = context.raw;
+                        if (val <= 30) return '#ff0055';
+                        if (val <= 70) return '#ffd700';
+                        return '#00f2ea';
+                    },
+                    pointRadius: 4,
+                    tension: 0.2,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#aaaaaa' }
+                    },
+                    y: {
+                        min: 0,
+                        max: 100,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                        ticks: { color: '#ffffff' },
+                        title: { display: true, text: 'Alertness %', color: '#ffffff' }
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

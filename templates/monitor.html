@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Monitor - Drowsiness Prevention System{% endblock %}
+
+{% block head %}
+<!-- MediaPipe Face Mesh and Hands CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+{% endblock %}
+
+{% block content %}
+<div class="monitor-container">
+    <div class="monitor-main">
+        <!-- Live Camera Wrapper -->
+        <div class="glass-card camera-card">
+            <div class="camera-header">
+                <div class="camera-title-group">
+                    <span class="pulse-dot red" id="rec-dot"></span>
+                    <h3>🔴 Live Alertness Stream</h3>
+                </div>
+                <div class="status-indicator">
+                    <span id="status-text">Camera Standby</span>
+                    <div id="status-light" class="light"></div>
+                </div>
+            </div>
+            
+            <div class="video-wrapper">
+                <video id="input-video" class="input-video" playsinline></video>
+                <canvas id="output-canvas" class="output-canvas"></canvas>
+                
+                <!-- Danger Warning Overlay -->
+                <div id="overlay-message" class="overlay-message hidden">
+                    <span class="warning-icon">⚠️</span>
+                    <h2 id="overlay-title">WAKE UP!</h2>
+                    <p id="overlay-desc">Drowsiness Detected</p>
+                </div>
+            </div>
+            
+            <div class="monitor-controls">
+                <button id="start-btn" class="btn primary">Start Monitoring</button>
+                <button id="stop-btn" class="btn secondary" disabled>Stop Session</button>
+                <button id="calibrate-btn" class="btn secondary" disabled>Calibrate Eyes</button>
+                <button id="photo-btn" class="btn secondary">Snapshot</button>
+                
+                <div class="settings">
+                    <label for="threshold-slider" title="Higher sensitivity will trigger warnings sooner">Sensitivity</label>
+                    <input type="range" id="threshold-slider" min="0.15" max="0.45" step="0.01" value="0.25">
+                    <span id="threshold-value" class="mono">0.25</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Metrics HUD -->
+        <div class="monitor-sidebar">
+            <div class="glass-card hud-card">
+                <h3>📊 Live Metrics HUD</h3>
+                <div class="hud-divider"></div>
+                
+                <div class="hud-item">
+                    <span class="hud-lbl">Left Eye EAR</span>
+                    <span id="ear-left" class="hud-val mono">0.00</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-lbl">Right Eye EAR</span>
+                    <span id="ear-right" class="hud-val mono">0.00</span>
+                </div>
+                <div class="hud-item highlighted">
+                    <span class="hud-lbl">Average EAR</span>
+                    <span id="ear-avg" class="hud-val mono">0.00</span>
+                </div>
+                
+                <div class="hud-divider"></div>
+                
+                <!-- Alertness meter -->
+                <div class="meter-wrapper">
+                    <div class="meter-lbl-row">
+                        <span>Current Alertness</span>
+                        <span id="alertness-percent" class="mono">100%</span>
+                    </div>
+                    <div class="meter-track">
+                        <div id="alertness-bar" class="meter-fill" style="width: 100%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Session summary widget -->
+            <div class="glass-card session-summary-card">
+                <h3>⏱️ Active Session Log</h3>
+                <div class="hud-divider"></div>
+                <div class="log-grid">
+                    <div class="log-cell">
+                        <span class="log-lbl">Elapsed Time</span>
+                        <span id="log-time" class="log-val mono">00:00:00</span>
+                    </div>
+                    <div class="log-cell">
+                        <span class="log-lbl">Focus Score</span>
+                        <span id="log-focus" class="log-val mono">100%</span>
+                    </div>
+                    <div class="log-cell">
+                        <span class="log-lbl">Yawns</span>
+                        <span id="log-yawns" class="log-val mono">0</span>
+                    </div>
+                    <div class="log-cell">
+                        <span class="log-lbl">Drowsiness Alerts</span>
+                        <span id="log-alerts" class="log-val mono">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wake Up Challenge Modal -->
+    <div id="challenge-modal" class="challenge-modal hidden">
+        <div class="challenge-content glass-card">
+            <h3 class="challenge-header">⚡ WAKE UP CHALLENGE ⚡</h3>
+            <p class="challenge-instruction">Prove you are fully awake by solving the task below!</p>
+            
+            <div id="challenge-area" class="challenge-area">
+                <!-- Challenge specific elements will be dynamically injected here by JS -->
+            </div>
+            
+            <div id="challenge-feedback" class="challenge-feedback hidden"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Application logic scripts -->
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+{% endblock %}

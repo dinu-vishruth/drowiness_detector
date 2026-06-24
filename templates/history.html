@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Session Logs - AuraFocus{% endblock %}
+
+{% block content %}
+<div class="session-history-container card">
+    <div class="card-header flex-header">
+        <div>
+            <h3>All Focus Sessions</h3>
+            <p>Export reports, check statistics, and monitor your focus growth</p>
+        </div>
+        <a href="{{ url_for('monitor') }}" class="btn primary">Start New Session</a>
+    </div>
+    
+    {% if not sessions %}
+        <div class="empty-state">
+            <span class="empty-icon">📂</span>
+            <h3>No Sessions Found</h3>
+            <p>You haven't recorded any sessions yet. Run a session in the monitor tab to see your logs here!</p>
+            <Spacer size="15"></Spacer>
+            <a href="{{ url_for('monitor') }}" class="btn primary">Start Monitoring Now</a>
+        </div>
+    {% else %}
+        <div class="table-responsive">
+            <table class="session-table">
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Duration</th>
+                        <th>Avg Alertness</th>
+                        <th>Alerts</th>
+                        <th>Yawns</th>
+                        <th>Blinks</th>
+                        <th>Nods</th>
+                        <th>Focus Score</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sessions %}
+                        <tr>
+                            <td>
+                                <strong>{{ s.start_time.strftime('%Y-%m-%d') }}</strong>
+                                <div class="text-muted font-small">{{ s.start_time.strftime('%I:%M %p') }}</div>
+                            </td>
+                            <td>{{ s.formatted_duration }}</td>
+                            <td>
+                                <div class="table-progress">
+                                    <span class="progress-num">{{ s.avg_alertness|round|int }}%</span>
+                                    <div class="progress-bar-bg small">
+                                        <div class="progress-bar-fill {% if s.avg_alertness >= 80 %}green{% elif s.avg_alertness >= 50 %}yellow{% else %}red{% endif %}" style="width: {{ s.avg_alertness }}%;"></div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if s.alerts_count > 0 %}warning-badge{% else %}success-badge{% endif %}">
+                                    {{ s.alerts_count }} alerts
+                                </span>
+                            </td>
+                            <td>{{ s.yawns_count }}</td>
+                            <td>{{ s.blinks_count }}</td>
+                            <td>{{ s.nods_count }}</td>
+                            <td>
+                                <span class="focus-score-cell {% if s.focus_score >= 85 %}high{% elif s.focus_score >= 60 %}medium{% else %}low{% endif %}">
+                                    {{ s.focus_score|round|int }}%
+                                </span>
+                            </td>
+                            <td class="action-buttons">
+                                <a href="{{ url_for('export_pdf', session_id=s.id) }}" class="btn-action pdf" title="Download PDF Report">
+                                    PDF
+                                </a>
+                                <a href="{{ url_for('export_csv', session_id=s.id) }}" class="btn-action csv" title="Download CSV Report">
+                                    CSV
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
